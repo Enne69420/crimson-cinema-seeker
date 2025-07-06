@@ -1,110 +1,81 @@
 import { useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import MovieCard from "./MovieCard";
 import poster1 from "@/assets/poster-1.jpg";
 import poster2 from "@/assets/poster-2.jpg";
 import poster3 from "@/assets/poster-3.jpg";
 import poster4 from "@/assets/poster-4.jpg";
 
-// Mock data for recommendations
-const generateMockRecommendations = (query: string) => [
-  {
-    id: 1,
-    title: "The Dark Knight",
-    rating: 9.0,
-    year: 2008,
-    genre: "Action, Crime, Drama",
-    description: "When a menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological and physical tests.",
-    poster: poster2
-  },
-  {
-    id: 2,
-    title: "Inception",
-    rating: 8.8,
-    year: 2010,
-    genre: "Action, Sci-Fi, Thriller",
-    description: "A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
-    poster: poster1
-  },
-  {
-    id: 3,
-    title: "Interstellar",
-    rating: 8.6,
-    year: 2014,
-    genre: "Adventure, Drama, Sci-Fi",
-    description: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival.",
-    poster: poster1
-  },
-  {
-    id: 4,
-    title: "The Matrix",
-    rating: 8.7,
-    year: 1999,
-    genre: "Action, Sci-Fi",
-    description: "A computer programmer is led to fight an underground war against powerful computers who have constructed his entire reality with a system called the Matrix.",
-    poster: poster1
-  },
-  {
-    id: 5,
-    title: "Pulp Fiction",
-    rating: 8.9,
-    year: 1994,
-    genre: "Crime, Drama",
-    description: "The lives of two mob hitmen, a boxer, a gangster and his wife intertwine in four tales of violence and redemption.",
-    poster: poster2
-  },
-  {
-    id: 6,
-    title: "Fight Club",
-    rating: 8.8,
-    year: 1999,
-    genre: "Drama",
-    description: "An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into an anarchist organization.",
-    poster: poster3
-  },
-  {
-    id: 7,
-    title: "The Shawshank Redemption",
-    rating: 9.3,
-    year: 1994,
-    genre: "Drama",
-    description: "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
-    poster: poster4
-  },
-  {
-    id: 8,
-    title: "Goodfellas",
-    rating: 8.7,
-    year: 1990,
-    genre: "Crime, Drama",
-    description: "The story of Henry Hill and his life in the mob, covering his relationship with his wife Karen Hill and his mob partners.",
-    poster: poster2
-  },
-  {
-    id: 9,
-    title: "The Godfather",
-    rating: 9.2,
-    year: 1972,
-    genre: "Crime, Drama",
-    description: "An aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.",
-    poster: poster4
-  },
-  {
-    id: 10,
-    title: "Seven",
-    rating: 8.6,
-    year: 1995,
-    genre: "Crime, Drama, Mystery",
-    description: "Two detectives hunt a serial killer who uses the seven deadly sins as his motives.",
-    poster: poster3
-  }
-];
+// Placeholder posters for variety
+const placeholderPosters = [poster1, poster2, poster3, poster4];
+
+interface Recommendation {
+  id: number;
+  title: string;
+  year: number;
+  rating: number;
+  genre: string;
+  description: string;
+  poster: string;
+}
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("query") || "";
-  const recommendations = generateMockRecommendations(query);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!query.trim()) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error: supabaseError } = await supabase.functions.invoke('get-movie-recommendations', {
+          body: { movieTitle: query }
+        });
+
+        if (supabaseError) {
+          throw supabaseError;
+        }
+
+        if (data?.recommendations) {
+          // Add placeholder posters to recommendations
+          const recommendationsWithPosters = data.recommendations.map((rec: any, index: number) => ({
+            ...rec,
+            poster: placeholderPosters[index % placeholderPosters.length]
+          }));
+          setRecommendations(recommendationsWithPosters);
+        } else {
+          throw new Error('No recommendations received');
+        }
+
+      } catch (err: any) {
+        console.error('Error fetching recommendations:', err);
+        setError(err.message || 'Failed to fetch recommendations');
+        toast({
+          title: "Error",
+          description: "Failed to generate recommendations. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [query, toast]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,19 +106,52 @@ const SearchResults = () => {
         </div>
 
         {/* Results Grid */}
-        <div className="space-y-4">
-          {recommendations.map((movie) => (
-            <MovieCard
-              key={movie.id}
-              title={movie.title}
-              rating={movie.rating}
-              description={movie.description}
-              poster={movie.poster}
-              year={movie.year}
-              genre={movie.genre}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg">
+                Generating personalized recommendations...
+              </p>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <p className="text-destructive text-lg mb-4">
+              Failed to generate recommendations
+            </p>
+            <p className="text-muted-foreground mb-8">
+              {error}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="text-primary border-primary hover:bg-primary/10"
+            >
+              Try Again
+            </Button>
+          </div>
+        ) : recommendations.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-muted-foreground text-lg">
+              No recommendations found. Try searching for a different movie or TV series.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recommendations.map((movie) => (
+              <MovieCard
+                key={movie.id}
+                title={movie.title}
+                rating={movie.rating}
+                description={movie.description}
+                poster={movie.poster}
+                year={movie.year}
+                genre={movie.genre}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
