@@ -109,13 +109,13 @@ const SearchResults = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-border px-6 py-4">
+      <nav className="border-b border-border/50 backdrop-blur-sm bg-background/80 px-6 py-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold text-primary">
+          <Link to="/" className="text-3xl font-bold text-primary">
             MovieMatch
           </Link>
           <Link to="/">
-            <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-card/50 rounded-xl px-6 py-3">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Search
             </Button>
@@ -124,34 +124,28 @@ const SearchResults = () => {
       </nav>
 
       {/* Results Content */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Recommendations for "{query}"
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            Recommendations for <span className="text-primary">"{query}"</span>
           </h1>
-          <p className="text-muted-foreground">
-            Here are 10 movies and TV series similar to your search
+          <p className="text-muted-foreground text-lg">
+            Here are 10 movies and TV series with similar themes and styles, rated by IMDb
           </p>
         </div>
 
         {/* Results Grid */}
-        <div className="space-y-6">
-          {recommendations.map((movie, index) => (
-            <div key={movie.id} className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary">{index + 1}</span>
-              </div>
-              <div className="flex-1">
-                <MovieCard
-                  title={movie.title}
-                  rating={movie.rating}
-                  description={movie.description}
-                  poster={movie.poster}
-                  year={movie.year}
-                  genre={movie.genre}
-                />
-              </div>
-            </div>
+        <div className="space-y-4">
+          {recommendations.map((movie) => (
+            <MovieCard
+              key={movie.id}
+              title={movie.title}
+              rating={movie.rating}
+              description={movie.description}
+              poster={movie.poster}
+              year={movie.year}
+              genre={movie.genre}
+            />
           ))}
         </div>
       </div>
